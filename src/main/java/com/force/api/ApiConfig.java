@@ -3,8 +3,7 @@ package com.force.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.net.URI;
-import java.net.URLDecoder;
+import java.net.*;
 
 public class ApiConfig {
 
@@ -16,6 +15,10 @@ public class ApiConfig {
 	String clientId;
 	String clientSecret;
 	String redirectURI;
+	String proxyHost;
+	Integer proxyPort;
+	String proxyUsername;
+	String proxyPassword;
 	SessionRefreshListener sessionRefreshListener;
 	ObjectMapper objectMapper;
 	int requestTimeout = 0; // in milliseconds, defaults to 0 which is no timeout (infinity)
@@ -35,7 +38,11 @@ public class ApiConfig {
 			.setClientSecret(clientSecret)
 			.setRedirectURI(redirectURI)
 			.setObjectMapper(objectMapper)
-			.setRequestTimeout(requestTimeout);
+			.setRequestTimeout(requestTimeout)
+			.setProxyHost(proxyHost)
+			.setProxyPort(proxyPort)
+			.setProxyUsername(proxyUsername)
+			.setProxyPassword(proxyPassword);
 	}
 	
 	public ApiConfig setForceURL(String url) {
@@ -102,6 +109,37 @@ public class ApiConfig {
 		clientSecret = value;
 		return this;
 	}
+
+	public ApiConfig setProxyHost(String value) {
+		proxyHost = value;
+		return this;
+	}
+
+	public ApiConfig setProxyPort(String value) {
+		try {
+			proxyPort = Integer.parseInt(value.trim());
+		}
+		catch(NullPointerException | NumberFormatException e){
+			proxyPort = null;
+		}
+		return this;
+	}
+
+	public ApiConfig setProxyPort(int value) {
+		proxyPort = value;
+		return this;
+	}
+
+	public ApiConfig setProxyUsername(String value) {
+		proxyUsername = value;
+		return this;
+	}
+
+	public ApiConfig setProxyPassword(String value) {
+		proxyPassword = value;
+		return this;
+	}
+
 	public ApiConfig setSessionRefreshListener(SessionRefreshListener value) {
 		sessionRefreshListener = value;
 		return this;
@@ -145,6 +183,27 @@ public class ApiConfig {
 	
 	public String getRedirectURI() {
 		return redirectURI;
+	}
+
+	public ProxySettings getProxySettings() {
+		ApiConfig config = this;
+		Proxy proxy = null;
+		Authenticator authenticator = null;
+		if(proxyHost != null && proxyPort != null) {
+			proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
+			if(proxyUsername != null && proxyPassword != null) {
+				authenticator = new Authenticator() {
+					@Override
+					protected PasswordAuthentication getPasswordAuthentication() {
+						if (getRequestorType() == RequestorType.PROXY && config.proxyUsername != null && config.proxyPassword != null) {
+							return new PasswordAuthentication(config.proxyUsername, config.proxyPassword.toCharArray());
+						}
+						return null;
+					}
+				};
+			}
+		}
+		return new ProxySettings(proxy, authenticator);
 	}
 
 	public SessionRefreshListener getSessionRefreshListener() { return sessionRefreshListener; }

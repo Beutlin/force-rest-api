@@ -1,5 +1,6 @@
 package com.force.api.http;
 
+import com.force.api.ProxySettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,11 +9,7 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.*;
 
 
 public class Http {
@@ -60,9 +57,14 @@ public class Http {
 		return bout.toByteArray();
 	}
 
-	public static final HttpResponse send(HttpRequest req) {
+	public static final HttpResponse send(HttpRequest req, ProxySettings proxySettings) {
 		try {
-			HttpURLConnection conn = (HttpURLConnection) new URL(req.getUrl()).openConnection();
+			URL url = new URL(req.getUrl());
+			Proxy proxy = proxySettings.getProxy();
+			HttpURLConnection conn = (HttpURLConnection) (proxy == null ? url.openConnection() : url.openConnection(proxy));
+			if(proxy != null && proxySettings.getProxyAuthenticator() != null) {
+				conn.setAuthenticator(proxySettings.getProxyAuthenticator());
+			}
 			if(req.getRequestTimeout()>0){
 				conn.setConnectTimeout(req.getRequestTimeout());
 				conn.setReadTimeout(req.getRequestTimeout());

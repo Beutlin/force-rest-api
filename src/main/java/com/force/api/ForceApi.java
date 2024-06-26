@@ -68,11 +68,11 @@ public class ForceApi {
 	}
 
 	public ForceApi(ApiConfig apiConfig) {
+		System.setProperty("jdk.http.auth.tunneling.disabledSchemes", "");
 		config = apiConfig;
 		jsonMapper = config.getObjectMapper();
 		session = Auth.authenticate(apiConfig);
 		autoRenew  = true;
-
 	}
 
 	public ApiSession getSession() {
@@ -496,7 +496,7 @@ public class ForceApi {
 	private final HttpResponse apiRequest(HttpRequest req) {
 		req.setAuthorization("Bearer "+session.getAccessToken());
 		req.setRequestTimeout(this.config.getRequestTimeout());
-		HttpResponse res = Http.send(req);
+		HttpResponse res = Http.send(req, this.config.getProxySettings());
 		if(res.getResponseCode()==401) {
 			// Perform one attempt to auto renew session if possible
 			if (autoRenew) {
@@ -510,7 +510,7 @@ public class ForceApi {
 					config.getSessionRefreshListener().sessionRefreshed(session);
 				}
 				req.setAuthorization("Bearer "+session.getAccessToken());
-				res = Http.send(req);
+				res = Http.send(req, this.config.getProxySettings());
 			}
 		}
 		// 304 is a special case when the "If-Modified-Since" header is used, it is not an error,

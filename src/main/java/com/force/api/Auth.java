@@ -4,10 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLEncoder;
+import java.net.*;
 import java.util.Map;
 
 
@@ -40,7 +37,8 @@ public class Auth {
 					.param("client_id",c.getClientId())
 					.param("client_secret", c.getClientSecret())
 					.param("username",c.getUsername())
-					.param("password",c.getPassword())
+					.param("password",c.getPassword()),
+					c.getProxySettings()
 			);
 			if(r.getResponseCode()!=200) {
 				throw new AuthException(r.getResponseCode(),"Auth.oauthLoginPasswordFlow failed: "+r.getString());
@@ -79,7 +77,12 @@ public class Auth {
 		if(c.getPassword()==null) throw new IllegalStateException("password cannot be null");
 		try {
 			URL url = new URL(c.getLoginEndpoint()+"/services/Soap/u/33.0");
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			Proxy proxy = c.getProxySettings().getProxy();
+			Authenticator authenticator = c.getProxySettings().getProxyAuthenticator();
+			HttpURLConnection conn = (HttpURLConnection) (proxy == null ? url.openConnection() : url.openConnection(proxy));
+			if(proxy != null && authenticator != null) {
+				conn.setAuthenticator(authenticator);
+			}
 			conn.setDoOutput(true);
 			conn.addRequestProperty("Content-Type", "text/xml");
 			conn.addRequestProperty("SOAPAction", "login");
@@ -161,7 +164,8 @@ public class Auth {
 					.param("client_id",res.apiConfig.getClientId())
 					.param("client_secret", res.apiConfig.getClientSecret())
 					.param("redirect_uri",res.apiConfig.getRedirectURI())
-					.preEncodedParam("code",res.code)
+					.preEncodedParam("code",res.code),
+					res.apiConfig.getProxySettings()
 			);
 			if(r.getResponseCode()!=200) {
 				throw new AuthException(r.getResponseCode(),r.getString());
@@ -191,7 +195,8 @@ public class Auth {
 					.param("grant_type","refresh_token")
 					.param("client_id",config.getClientId())
 					.param("client_secret", config.getClientSecret())
-					.param("refresh_token", refreshToken)
+					.param("refresh_token", refreshToken),
+					config.getProxySettings()
 			);
 			if(r.getResponseCode()!=200) {
 				throw new AuthException(r.getResponseCode(),r.getString());
@@ -222,7 +227,8 @@ public class Auth {
 			Http.send(HttpRequest.formPost()
 				.header("Accept","*/*")
 				.url(config.getLoginEndpoint()+"/services/oauth2/revoke")
-				.param("token", token));
+				.param("token", token),
+				config.getProxySettings());
 		} catch(Throwable t) {
 			// Looks like revoke endpoint closes stream when trying to revoke
 			// an already revoked token. It doesn't return an error code. So

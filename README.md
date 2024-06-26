@@ -103,6 +103,15 @@ If you already have an access token and endpoint (e.g. from a cookie), you can p
 
     ForceApi api = new ForceApi(c,s);
 
+### Instantiate with proxy
+
+    ForceApi api = new ForceApi(new ApiConfig()
+        .setProxyHost("127.0.0.1")
+        .setProxyPort(8080)
+        .setProxyUsername("proxy-user")
+        .setProxyPassword("proxy-password"));
+
+
 ## CRUD and Query Operations
 
 ### Get an SObject
